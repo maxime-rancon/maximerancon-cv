@@ -1,0 +1,34 @@
+@page {
+  size: A4;
+  margin: 0; /* you control margins via padding instead */
+}
+
+.page {
+  width: 210mm;
+  height: 297mm; /* fixed, so you notice when content overflows */
+  padding: 15mm;
+  margin: 10mm auto;
+  background: white;
+  box-shadow: 0 0 5mm rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+body {
+  background: #e5e5e5; /* grey "desk" behind the sheet on screen */
+}
+
+@media print {
+  body {
+    background: none;
+  }
+  .page {
+    margin: 0;
+    box-shadow: none;
+  }
+}
+
+* {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact; /* keep background colors/sidebars when printing */
+}
