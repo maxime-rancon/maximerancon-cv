@@ -32,3 +32,11 @@ body {
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact; /* keep background colors/sidebars when printing */
 }
+
+.content p,li {
+  font-size: 14px;
+}
+
+.sidebar {
+  background-color: #f5f5f5;
+}
