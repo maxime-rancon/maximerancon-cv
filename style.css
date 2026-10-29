@@ -43,19 +43,19 @@ p {
   background: linear-gradient(
     to bottom,
     rgb(103, 37, 69) 0%,
-    rgb(103, 37, 69) 32%,
-    rgb(150, 38, 63) 32%,
-    rgb(150, 38, 63) 45.6%,
-    rgb(203, 52, 44) 45.6%,
-    rgb(203, 52, 44) 59.2%,
-    rgb(227, 89, 44) 59.2%,
-    rgb(227, 89, 44) 72.8%,
-    rgb(244, 210, 93) 72.8%,
-    rgb(244, 210, 93) 86.4%,
-    rgb(254, 252, 234) 86.4%,
+    rgb(103, 37, 69) 42%,
+    rgb(150, 38, 63) 42%,
+    rgb(150, 38, 63) 53.6%,
+    rgb(203, 52, 44) 53.6%,
+    rgb(203, 52, 44) 64.2%,
+    rgb(227, 89, 44) 64.2%,
+    rgb(227, 89, 44) 75.8%,
+    rgb(244, 210, 93) 75.8%,
+    rgb(244, 210, 93) 87.4%,
+    rgb(254, 252, 234) 87.4%,
     rgb(254, 252, 234) 100%
   );
-  padding-top: 10px;
+  padding-top: 20px;
   padding-left: 10px;
   padding-right: 10px;
 }
@@ -82,4 +82,13 @@ h1 {
 .content,
 .sidebar {
   translate: 0 -40px;
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+}
+
+.sidebar > p {
+  padding-bottom: 10px;
 }
