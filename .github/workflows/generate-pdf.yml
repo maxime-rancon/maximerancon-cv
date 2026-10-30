@@ -1,0 +1,156 @@
+name: Generate resume PDF
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: resume-pdf-release
+  cancel-in-progress: false
+
+jobs:
+  generate-pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+
+      - name: Generate PDF
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 > /tmp/cv-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8000/ > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          node <<'NODE'
+          const { chromium } = require("playwright");
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            try {
+              const page = await browser.newPage();
+              await page.emulateMedia({ media: "print" });
+              await page.goto("http://127.0.0.1:8000", { waitUntil: "networkidle" });
+              await page.pdf({
+                path: "resume.pdf",
+                format: "A4",
+                printBackground: true,
+                preferCSSPageSize: true,
+              });
+            } finally {
+              await browser.close();
+            }
+          })().catch((error) => {
+            console.error(error);
+            process.exitCode = 1;
+          });
+          NODE
+
+      - name: Upload PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: resume-pdf
+          path: resume.pdf
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish latest PDF release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("node:fs/promises");
+            const { owner, repo } = context.repo;
+            const tag = "latest";
+            const assetName = "Maxime Rancon - CV.pdf";
+            let release;
+
+            try {
+              ({ data: release } = await github.rest.repos.getReleaseByTag({
+                owner,
+                repo,
+                tag,
+              }));
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+
+            try {
+              await github.rest.git.getRef({ owner, repo, ref: `tags/${tag}` });
+              await github.rest.git.updateRef({
+                owner,
+                repo,
+                ref: `tags/${tag}`,
+                sha: context.sha,
+                force: true,
+              });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+
+            if (!release) {
+              ({ data: release } = await github.rest.repos.createRelease({
+                owner,
+                repo,
+                tag_name: tag,
+                target_commitish: context.sha,
+                name: "Latest resume",
+                body: "Automatically updated by the resume PDF workflow.",
+                make_latest: "true",
+              }));
+            } else {
+              await github.rest.repos.updateRelease({
+                owner,
+                repo,
+                release_id: release.id,
+                name: "Latest resume",
+                body: "Automatically updated by the resume PDF workflow.",
+                make_latest: "true",
+              });
+            }
+
+            const assets = await github.paginate(
+              github.rest.repos.listReleaseAssets,
+              { owner, repo, release_id: release.id }
+            );
+            for (const asset of assets) {
+              if (asset.name === assetName) {
+                await github.rest.repos.deleteReleaseAsset({
+                  owner,
+                  repo,
+                  asset_id: asset.id,
+                });
+              }
+            }
+
+            const data = await fs.readFile("resume.pdf");
+            await github.rest.repos.uploadReleaseAsset({
+              owner,
+              repo,
+              release_id: release.id,
+              name: assetName,
+              data,
+              headers: {
+                "content-type": "application/pdf",
+                "content-length": data.length,
+              },
+            });
